@@ -358,6 +358,9 @@ const STRINGS = {
     readOnlyBanner: "🔒 보기 전용 — 방장이 수정을 잠근 세션입니다",
     hostOnlyReset: "게임 초기화는 세션을 만든 방장만 할 수 있어요.",
     analyticsNote: "서비스 개선을 위해 익명 사용 통계(Google Analytics)를 수집합니다.",
+    applyPrice: "주가 반영",
+    priceApplied: (from, to) => `주가 반영됨: ${from} → ${to}`,
+    parLabel: "시작 주가",
     groups: {},
   },
   en: {
@@ -424,6 +427,9 @@ const STRINGS = {
     readOnlyBanner: "🔒 View only — the host has locked editing for this session",
     hostOnlyReset: "Only the session host can reset the game.",
     analyticsNote: "Anonymous usage statistics (Google Analytics) are collected to improve this tool.",
+    applyPrice: "Apply price move",
+    priceApplied: (from, to) => `Price updated: ${from} → ${to}`,
+    parLabel: "Starting price",
     groups: { "북한": "North Korea", "남한": "South Korea" },
   },
 };
@@ -438,6 +444,8 @@ const tGroup = (g) => (STRINGS[lang].groups && STRINGS[lang].groups[g]) || g;
 const GAME_PRESETS = {
   "1817": {
     sizes: [2, 5, 10],
+    // 18xx.games 데이터 기준. 맨 왼쪽 청산/인수 구역(0l/0a)은 미지원 — 40에서 멈춤
+    market: [40, 45, 50, 55, 60, 65, 70, 80, 90, 100, 110, 120, 135, 150, 165, 180, 200, 220, 245, 270, 300, 330, 360, 400, 440, 490, 540, 600],
     companies: [
       { sym: "A&S",  name: "Alton & Southern Railway" },
       { sym: "A&A",  name: "Arcade and Attica" },
@@ -488,6 +496,9 @@ const GAME_PRESETS = {
   },
   "18Korea": {
     sizes: [10],
+    market: [30, 35, 40, 45, 50, 55, 60, 65, 70, 80, 90, 100, 110, 120, 130, 145, 160, 180, 200, 220, 240, 260, 280, 310, 340, 380, 420, 460, 500],
+    par: { min: 60, max: 200, default: 100 },
+    parNote: { ko: "한국전쟁 이전 60~100 · 이후 60~200", en: "60–100 before the war · 60–200 after" },
     companies: [
       { sym: "라선",   group: "북한" },
       { sym: "청진",   group: "북한" },
@@ -531,6 +542,7 @@ let state = {
 };
 let activeTab = "dividend";
 let pendingPick = null; // 프리셋에서 선택했지만 아직 추가 전인 회사 sym
+let pendingPar = null;  // 회사 추가 시 선택한 시작 주가 (null이면 기본값)
 
 /* Firebase는 빈 배열/null 키를 제거해서 돌려주고, 이전 버전 저장 데이터에는
    자사주/은행주 필드가 없으므로 어디서 온 상태든 여기서 형태를 보정한다 */
@@ -756,6 +768,32 @@ function priceMoveHint(company, revenue, mode) {
   return t("right1817", n, fmt(revenue));
 }
 
+/* ---------- 주가 트랙 (자동 이동) ---------- */
+const marketOf = () => (GAME_PRESETS[state.game] && GAME_PRESETS[state.game].market) || null;
+
+function priceIndex(market, price) {
+  let best = 0;
+  for (let i = 0; i < market.length; i++)
+    if (Math.abs(market[i] - price) < Math.abs(market[best] - price)) best = i;
+  return best;
+}
+
+function stepPrice(market, price, steps) {
+  const idx = Math.max(0, Math.min(market.length - 1, priceIndex(market, price) + steps));
+  return market[idx];
+}
+
+// 배당/유보에 따른 트랙 이동 칸수 (음수 = 하락, priceMoveHint와 같은 규칙)
+function moveSteps(company, revenue, mode) {
+  if (mode === "withhold" || revenue <= 0) return -1;
+  if (!company.price || company.price <= 0) return 0;
+  if (state.game === "18Korea") {
+    if (revenue < company.price) return 0;
+    return revenue < company.price * 2 ? 1 : 2;
+  }
+  return Math.min(3, Math.floor(revenue / company.price)); // 1817 기준
+}
+
 /* ---------- 렌더링 ---------- */
 /* 언어에 따라 바뀌는 고정 요소(헤더/탭/푸터) */
 function renderChrome() {
@@ -847,6 +885,18 @@ function renderDividend() {
         companyRows += `<tr><td>${t("poolRow")}</td><td class="muted">${t("shares", co.pool)} · ${t("rule1817")}</td>
           <td class="money">${fmt(r.poolAmt)}</td></tr>`;
     }
+    // 주가 트랙이 있는 게임: 한 번 탭으로 주가 이동 확정
+    let applyHtml = "";
+    const market = marketOf();
+    if (market) {
+      if (state.lastDividend.applied) {
+        applyHtml = `<div class="muted" style="margin-top:8px">✓ ${t("priceApplied", fmt(state.lastDividend.applied.from), fmt(state.lastDividend.applied.to))}</div>`;
+      } else {
+        const steps = moveSteps(co, revenue, mode);
+        const arrow = steps < 0 ? `▼${-steps}` : steps > 0 ? `▲${steps}` : "±0";
+        applyHtml = `<button class="btn primary" id="applyPriceBtn" style="width:100%; margin-top:10px">${t("applyPrice")} (${arrow} · ${fmt(co.price)} → ${fmt(stepPrice(market, co.price, steps))})</button>`;
+      }
+    }
     resultHtml = `
       <div class="card">
         <h2>${esc(co.name)} — ${mode === "withhold" ? t("withholdTitle") : t("payTitle")}</h2>
@@ -858,7 +908,8 @@ function renderDividend() {
           ${rows}
           ${companyRows}
         </table>
-        <div class="move-hint">${priceMoveHint(co, revenue, mode)} · ${t("moveChart")}</div>
+        <div class="move-hint">${priceMoveHint(co, revenue, mode)}${market ? "" : " · " + t("moveChart")}</div>
+        ${applyHtml}
       </div>`;
   }
 
@@ -901,6 +952,16 @@ function renderDividend() {
   };
   el.querySelector("#payBtn").onclick = () => run("pay");
   el.querySelector("#withholdBtn").onclick = () => run("withhold");
+  el.querySelector("#applyPriceBtn")?.addEventListener("click", () => {
+    const market = marketOf();
+    if (!market || !state.lastDividend || state.lastDividend.applied) return;
+    const company = state.companies[state.lastDividend.companyIdx];
+    const steps = moveSteps(company, state.lastDividend.revenue, state.lastDividend.mode);
+    const from = company.price;
+    company.price = stepPrice(market, from, steps);
+    state.lastDividend.applied = { from, to: company.price };
+    save(); render();
+  });
 }
 
 function renderAddCompanyCard() {
@@ -939,8 +1000,23 @@ function renderAddCompanyCard() {
     const sizeBtns = preset.sizes
       .map((s, i) => `<button class="btn small ${i === preset.sizes.length - 1 ? "primary" : ""}" data-new-size="${s}" ${pendingPick ? "" : "disabled"}>${t("addNShares", s)}</button>`)
       .join("");
+
+    // 시작 주가(액면가) 선택 — par가 정의된 게임에서 회사를 고르면 표시
+    let parRow = "";
+    if (preset.par && pendingPick) {
+      const cur = pendingPar ?? preset.par.default;
+      const parChips = preset.market
+        .filter(v => v >= preset.par.min && v <= preset.par.max)
+        .map(v => `<button class="chip ${v === cur ? "on" : ""}" data-par="${v}">${v}</button>`)
+        .join("");
+      parRow = `
+        <div class="muted" style="margin:8px 0 4px; font-size:12px">${t("parLabel")}${preset.parNote ? " · " + esc(preset.parNote[lang] || preset.parNote.ko) : ""}</div>
+        <div class="row wrap" style="margin-bottom:8px">${parChips}</div>`;
+    }
+
     picker = `
       <div style="margin-bottom:8px">${chipsArea}</div>
+      ${parRow}
       <div class="row">
         <span class="grow muted">${pendingPick ? `<b>${esc(pendingPick)}</b>${fullName}` : t("selectPrompt")}</span>
         ${sizeBtns}
@@ -991,7 +1067,16 @@ function renderCompany() {
         <button class="btn small" data-del-co="${i}">${t("del")}</button>
       </div>
       <div class="row" style="margin-top:8px">
-        <label class="muted grow">${t("price")} <input type="number" inputmode="numeric" value="${c.price}" data-co-price="${i}"></label>
+        ${marketOf() ? `
+        <div class="row grow">
+          <span class="muted">${t("price")}</span>
+          <div class="stepper">
+            <button data-price-step="${i}:-1">−</button>
+            <span class="val">${c.price}</span>
+            <button data-price-step="${i}:1">＋</button>
+          </div>
+        </div>` : `
+        <label class="muted grow">${t("price")} <input type="number" inputmode="numeric" value="${c.price}" data-co-price="${i}"></label>`}
         <label class="muted grow">${t("shareCount")} <input type="number" inputmode="numeric" value="${c.size}" data-co-size="${i}"></label>
       </div>
       ${holdRows}
@@ -1049,6 +1134,7 @@ function renderCompany() {
   el.querySelectorAll("[data-game]").forEach(b => b.onclick = () => {
     state.game = b.dataset.game;
     pendingPick = null;
+    pendingPar = null;
     track("game_selected", { game: state.game || "custom" });
     save(); render();
   });
@@ -1056,9 +1142,14 @@ function renderCompany() {
     pendingPick = b.dataset.pick;
     render();
   });
+  el.querySelectorAll("[data-par]").forEach(b => b.onclick = () => {
+    pendingPar = +b.dataset.par;
+    render();
+  });
   el.querySelectorAll("[data-new-size]").forEach(b => b.onclick = () => {
+    const preset = GAME_PRESETS[state.game];
     let name;
-    if (GAME_PRESETS[state.game]) {
+    if (preset) {
       if (!pendingPick) return;
       name = pendingPick;
       pendingPick = null;
@@ -1066,7 +1157,8 @@ function renderCompany() {
       name = el.querySelector("#newCoName").value.trim() || t("defaultCoName", state.companies.length + 1);
     }
     state.companies.push({
-      name, size: +b.dataset.newSize, price: 100,
+      name, size: +b.dataset.newSize,
+      price: preset?.par ? (pendingPar ?? preset.par.default) : 100,
       hold: state.players.map(() => 0),
       treasury: 0, pool: 0,
     });
@@ -1099,6 +1191,14 @@ function renderCompany() {
   el.querySelectorAll("[data-co-price]").forEach(inp => inp.onchange = () => {
     state.companies[+inp.dataset.coPrice].price = Math.max(0, parseInt(inp.value, 10) || 0);
     save();
+  });
+  el.querySelectorAll("[data-price-step]").forEach(b => b.onclick = () => {
+    const market = marketOf();
+    if (!market) return;
+    const [ci, d] = b.dataset.priceStep.split(":").map(Number);
+    const c = state.companies[ci];
+    c.price = stepPrice(market, c.price, d);
+    save(); render();
   });
   el.querySelectorAll("[data-co-size]").forEach(inp => inp.onchange = () => {
     state.companies[+inp.dataset.coSize].size = Math.max(1, parseInt(inp.value, 10) || 1);
