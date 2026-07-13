@@ -105,6 +105,7 @@
     border-radius: 8px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer;
   }
   .btn:active { transform: translateY(1px); }
+  main button:disabled, main input:disabled { opacity: .45; cursor: default; }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .btn.small { padding: 5px 10px; font-size: 13px; }
   .btn:focus-visible, input:focus-visible, .chip:focus-visible {
@@ -319,6 +320,12 @@ const STRINGS = {
     checkCode: "코드를 확인해 주세요.",
     notFound: "해당 코드의 세션을 찾을 수 없어요.",
     connFail: "연결에 실패했어요. 인터넷과 Firebase 설정을 확인해 주세요.",
+    lock: "수정 잠금", unlock: "잠금 해제",
+    lockDesc: "잠그면 방장(나)만 수정할 수 있고, 나머지는 보기 전용이 됩니다.",
+    lockedByHost: "방장이 수정을 잠갔습니다. 지금은 보기 전용이에요.",
+    youAreHost: "내가 방장",
+    readOnlyBanner: "🔒 보기 전용 — 방장이 수정을 잠근 세션입니다",
+    hostOnlyReset: "게임 초기화는 세션을 만든 방장만 할 수 있어요.",
     groups: {},
   },
   en: {
@@ -378,6 +385,12 @@ const STRINGS = {
     checkCode: "Please check the code.",
     notFound: "No session found for that code.",
     connFail: "Connection failed. Check your internet and Firebase config.",
+    lock: "Lock editing", unlock: "Unlock",
+    lockDesc: "When locked, only you (the host) can edit; everyone else becomes view-only.",
+    lockedByHost: "The host has locked editing. You are in view-only mode.",
+    youAreHost: "you are the host",
+    readOnlyBanner: "🔒 View only — the host has locked editing for this session",
+    hostOnlyReset: "Only the session host can reset the game.",
     groups: { "북한": "North Korea", "남한": "South Korea" },
   },
 };
@@ -520,7 +533,7 @@ function save() {
 const fmt = (n) => (state.game === "18Korea" ? "₩" : "$") + Math.round(n).toLocaleString();
 
 /* ---------- 세션 공유 (Firebase Realtime Database) ---------- */
-let session = { code: null, fb: null, unsub: null };
+let session = { code: null, fb: null, unsub: null, owner: null, locked: false };
 let pushTimer = null;
 
 function genCode() {
@@ -553,16 +566,29 @@ function firebase() {
   if (!fbPromise) fbPromise = (async () => {
     const appMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
     const dbMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
+    const authMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
     const app = appMod.initializeApp(FIREBASE_CONFIG);
-    return { db: dbMod.getDatabase(app), ref: dbMod.ref, set: dbMod.set, get: dbMod.get, onValue: dbMod.onValue };
+    // 익명 인증: 회원가입 없이 기기별 고유 ID 부여 (방장 판별 + 잠금 규칙에 사용)
+    const cred = await authMod.signInAnonymously(authMod.getAuth(app));
+    return { db: dbMod.getDatabase(app), uid: cred.user.uid, ref: dbMod.ref, set: dbMod.set, get: dbMod.get, onValue: dbMod.onValue };
   })();
   return fbPromise;
+}
+
+const isHost = () => !!(session.fb && session.owner && session.owner === session.fb.uid);
+const isReadOnly = () => !!(session.code && session.locked && !isHost());
+
+async function setLocked(v) {
+  const fb = session.fb;
+  await fb.set(fb.ref(fb.db, "sessions/" + session.code + "/locked"), v);
 }
 
 async function createSession() {
   const fb = await firebase();
   const code = genCode();
-  await fb.set(fb.ref(fb.db, "sessions/" + code), { state, updatedAt: Date.now() });
+  await fb.set(fb.ref(fb.db, "sessions/" + code), {
+    state, owner: fb.uid, locked: false, updatedAt: Date.now(),
+  });
   attachSession(code, fb);
   return code;
 }
@@ -576,28 +602,39 @@ async function joinSession(code) {
 
 function attachSession(code, fb) {
   if (session.unsub) session.unsub();
-  session = { code, fb };
+  session = { code, fb, owner: null, locked: false };
   try { localStorage.setItem(SESSION_KEY, code); } catch (e) {}
-  session.unsub = fb.onValue(fb.ref(fb.db, "sessions/" + code + "/state"), snap => {
-    const remote = snap.val();
-    if (!remote) return;
-    if (stableJson(remote) === stableJson(state)) return; // 자기 에코 무시
-    state = normalizeState(remote);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
-    render();
+  // state뿐 아니라 owner/locked 변경도 실시간 반영해야 하므로 세션 노드 전체를 구독
+  session.unsub = fb.onValue(fb.ref(fb.db, "sessions/" + code), snap => {
+    const val = snap.val();
+    if (!val) return;
+    const lockChanged = session.locked !== !!val.locked;
+    session.owner = val.owner || null;
+    session.locked = !!val.locked;
+    updateSessionBadge();
+
+    const remote = val.state;
+    if (remote && stableJson(remote) !== stableJson(state)) {
+      state = normalizeState(remote);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+      render();
+    } else if (lockChanged) {
+      render(); // 잠금 상태만 바뀌어도 읽기 전용 UI를 갱신
+    }
   });
   updateSessionBadge();
 }
 
 function leaveSession() {
   if (session.unsub) session.unsub();
-  session = { code: null, fb: null, unsub: null };
+  session = { code: null, fb: null, unsub: null, owner: null, locked: false };
   try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
   updateSessionBadge();
+  render();
 }
 
 function schedulePush() {
-  if (!session.code) return;
+  if (!session.code || isReadOnly()) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(() => {
     const fb = session.fb;
@@ -608,7 +645,7 @@ function schedulePush() {
 function updateSessionBadge() {
   const badge = document.getElementById("sessionBadge");
   badge.hidden = !session.code;
-  badge.textContent = session.code ? "● " + session.code : "";
+  badge.textContent = session.code ? "● " + session.code + (session.locked ? " 🔒" : "") : "";
 }
 
 /* 샌드박스(iframe)에서는 window.confirm이 차단되어 항상 false를 반환하므로 자체 다이얼로그 사용 */
@@ -632,6 +669,22 @@ function showConfirm(message, okLabel, onOk) {
   document.body.appendChild(backdrop);
   backdrop.querySelector("[data-cancel]").focus();
 }
+function showAlert(message) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `<div class="modal" role="alertdialog" aria-modal="true">
+    <p></p>
+    <button class="btn grow" data-cancel style="width:100%"></button>
+  </div>`;
+  backdrop.querySelector("p").textContent = message;
+  backdrop.querySelector("[data-cancel]").textContent = t("close");
+  const close = () => backdrop.remove();
+  backdrop.onclick = (e) => { if (e.target === backdrop) close(); };
+  backdrop.querySelector("[data-cancel]").onclick = close;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector("[data-cancel]").focus();
+}
+
 const esc = (s) => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 /* ---------- 배당 계산 ---------- */
@@ -704,6 +757,14 @@ function render() {
   if (activeTab === "dividend") renderDividend();
   if (activeTab === "company") renderCompany();
   if (activeTab === "score") renderScore();
+
+  // 잠긴 세션의 비방장: 보기 전용 — 조작 요소 비활성화 + 안내 배너
+  if (isReadOnly()) {
+    const viewEl = document.getElementById("view-" + activeTab);
+    viewEl.insertAdjacentHTML("afterbegin",
+      `<div class="card" style="border-left:3px solid var(--gold)"><span class="muted">${t("readOnlyBanner")}</span></div>`);
+    viewEl.querySelectorAll("input, button").forEach(x => x.disabled = true);
+  }
 }
 
 /* --- 배당 탭 --- */
@@ -1071,10 +1132,20 @@ function showSessionModal() {
       <p class="muted">${t("setupBody")}</p>
       <button class="btn grow" data-cancel style="width:100%">${t("close")}</button>`;
   } else if (session.code) {
+    let lockArea;
+    if (isHost()) {
+      lockArea = `
+        <button class="btn" data-lock style="width:100%; margin-bottom:8px">
+          ${session.locked ? "🔓 " + t("unlock") : "🔒 " + t("lock")}
+        </button>
+        <p class="muted" style="margin-bottom:10px">${t("lockDesc")}</p>`;
+    } else {
+      lockArea = `<p class="muted" style="margin-bottom:10px">${session.locked ? "🔒 " + t("lockedByHost") : t("sessionDesc")}</p>`;
+    }
     inner = `
-      <p class="muted" style="text-align:center; margin-bottom:4px">${t("sessionCode")}</p>
+      <p class="muted" style="text-align:center; margin-bottom:4px">${t("sessionCode")}${isHost() ? " · " + t("youAreHost") : ""}</p>
       <div class="session-code">${session.code}</div>
-      <p class="muted">${t("sessionDesc")}</p>
+      ${lockArea}
       <div class="row">
         <button class="btn grow" data-cancel>${t("close")}</button>
         <button class="btn danger grow" data-leave>${t("leaveSession")}</button>
@@ -1104,6 +1175,16 @@ function showSessionModal() {
   backdrop.querySelector("[data-leave]")?.addEventListener("click", () => {
     leaveSession();
     close();
+  });
+  backdrop.querySelector("[data-lock]")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await setLocked(!session.locked);
+      close(); showSessionModal(); // 바뀐 잠금 상태로 다시 표시
+    } catch (err) {
+      btn.disabled = false;
+    }
   });
   backdrop.querySelector("[data-create]")?.addEventListener("click", async (e) => {
     const btn = e.currentTarget;
@@ -1137,6 +1218,7 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   render();
 });
 document.getElementById("resetBtn").onclick = () => {
+  if (session.code && !isHost()) { showAlert(t("hostOnlyReset")); return; }
   showConfirm(
     session.code ? t("resetConfirmSession") : t("resetConfirm"),
     t("resetOk"), () => {
