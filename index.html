@@ -235,7 +235,16 @@
    { "rules": { "sessions": { "$code": { ".read": true, ".write": true } } } }
    ※ claude.ai 미리보기에서는 외부 연결이 차단되어 세션 기능이 동작하지
       않습니다. GitHub Pages 등 정적 호스팅에 올린 뒤 사용하세요. */
-const FIREBASE_CONFIG = null; // 예: { apiKey: "...", databaseURL: "https://....firebasedatabase.app", ... }
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAPfOfLc1nu2GB4Dw3-iEeUXQnPRmAl9yg",
+  authDomain: "tabletopchronicler-bb6be.firebaseapp.com",
+  databaseURL: "https://tabletopchronicler-bb6be-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "tabletopchronicler-bb6be",
+  storageBucket: "tabletopchronicler-bb6be.firebasestorage.app",
+  messagingSenderId: "1048080180861",
+  appId: "1:1048080180861:web:b8f8c681308ae9c47bb314",
+  measurementId: "G-1FMR9KHWNS",
+};
 
 /* [후원/문의] 실제 주소로 바꿔주세요. null로 두면 해당 버튼이 숨겨집니다 */
 const KOFI_URL = null;                                      // 해외 후원 (예: "https://ko-fi.com/아이디")
