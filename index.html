@@ -1,0 +1,1158 @@
+<title>18xx Helper</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  :root {
+    --bg: #F1F3EF;
+    --surface: #FBFCFA;
+    --surface2: #E7EBE5;
+    --ink: #20291F;
+    --ink-soft: #5C6A5C;
+    --line: #D3DAD1;
+    --accent: #2F6B52;
+    --accent-ink: #FFFFFF;
+    --gold: #9A7524;
+    --red: #B3402F;
+    --shadow: 0 1px 3px rgba(32, 41, 31, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151A17;
+      --surface: #1E2420;
+      --surface2: #29312B;
+      --ink: #E4EAE2;
+      --ink-soft: #93A093;
+      --line: #384139;
+      --accent: #5FA383;
+      --accent-ink: #10241B;
+      --gold: #D2A64C;
+      --red: #E0705F;
+      --shadow: 0 1px 3px rgba(0, 0, 0, .35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F1F3EF; --surface: #FBFCFA; --surface2: #E7EBE5;
+    --ink: #20291F; --ink-soft: #5C6A5C; --line: #D3DAD1;
+    --accent: #2F6B52; --accent-ink: #FFFFFF;
+    --gold: #9A7524; --red: #B3402F;
+    --shadow: 0 1px 3px rgba(32, 41, 31, .08);
+  }
+  :root[data-theme="dark"] {
+    --bg: #151A17; --surface: #1E2420; --surface2: #29312B;
+    --ink: #E4EAE2; --ink-soft: #93A093; --line: #384139;
+    --accent: #5FA383; --accent-ink: #10241B;
+    --gold: #D2A64C; --red: #E0705F;
+    --shadow: 0 1px 3px rgba(0, 0, 0, .35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    padding-bottom: 76px; /* 하단 탭 공간 */
+  }
+  main { max-width: 560px; margin: 0 auto; padding: 0 14px; }
+
+  header {
+    max-width: 560px; margin: 0 auto; padding: 18px 14px 10px;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  }
+  header h1 {
+    margin: 0;
+    font-family: "Nanum Myeongjo", Batang, "Apple Myungjo", Georgia, serif;
+    font-size: 21px; font-weight: 700; letter-spacing: .02em;
+  }
+  header h1 small { color: var(--accent); font-size: 13px; margin-left: 6px; letter-spacing: .12em; }
+  .hbtn {
+    background: none; border: 1px solid var(--line); color: var(--ink-soft);
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+  }
+  #sessionBadge {
+    background: var(--surface2); color: var(--accent); border-radius: 999px;
+    padding: 3px 10px; font-size: 12px; font-weight: 700; letter-spacing: .08em;
+    font-variant-numeric: tabular-nums;
+  }
+  .session-code {
+    text-align: center; font-size: 30px; font-weight: 800; letter-spacing: .28em;
+    color: var(--accent); margin: 4px 0 12px; font-variant-numeric: tabular-nums;
+  }
+  footer { max-width: 560px; margin: 6px auto 0; padding: 0 14px 10px; text-align: center; }
+  #supportLinks { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  footer a {
+    display: inline-block; color: var(--ink-soft); font-size: 13px; text-decoration: none;
+    border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px;
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: var(--shadow); padding: 14px; margin-bottom: 12px;
+  }
+  .card h2 {
+    margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .muted { color: var(--ink-soft); font-size: 13px; }
+  .money { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .neg { color: var(--red); }
+  .pos { color: var(--gold); }
+
+  button { font-family: inherit; touch-action: manipulation; }
+  .btn {
+    background: var(--surface2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+  .btn:focus-visible, input:focus-visible, .chip:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+
+  input[type="text"], input[type="number"] {
+    background: var(--bg); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; font-size: 15px; width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="number"] { -moz-appearance: textfield; }
+
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row.wrap { flex-wrap: wrap; }
+  .grow { flex: 1; }
+
+  /* 칩(회사 선택 등) */
+  .chip {
+    background: var(--surface2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  /* 보유 주식 스테퍼 */
+  .stepper { display: flex; align-items: center; gap: 2px; }
+  .stepper button {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--surface2); color: var(--ink); font-size: 17px; font-weight: 700; cursor: pointer;
+  }
+  .stepper .val {
+    min-width: 34px; text-align: center; font-variant-numeric: tabular-nums;
+    font-weight: 700; font-size: 16px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 4px; text-align: left; border-bottom: 1px solid var(--line); }
+  td:last-child, th:last-child { text-align: right; }
+  tr:last-child td { border-bottom: none; }
+
+  /* 배당 결과 강조 */
+  .payout-summary {
+    display: flex; justify-content: space-between; align-items: baseline;
+    background: var(--surface2); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px;
+  }
+  .payout-summary .per { font-size: 22px; }
+
+  .move-hint {
+    border-left: 3px solid var(--accent); padding: 6px 10px; margin-top: 10px;
+    font-size: 13px; color: var(--ink-soft); background: var(--surface2); border-radius: 0 6px 6px 0;
+  }
+
+  /* 하단 탭 */
+  nav {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--surface); border-top: 1px solid var(--line);
+    display: flex; justify-content: center; gap: 4px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav button {
+    flex: 1; max-width: 180px; border: none; background: none; color: var(--ink-soft);
+    font-size: 14px; font-weight: 700; padding: 10px 4px; border-radius: 8px; cursor: pointer;
+  }
+  nav button.on { color: var(--accent); background: var(--surface2); }
+
+  .rank-badge {
+    display: inline-flex; width: 22px; height: 22px; border-radius: 50%;
+    align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    background: var(--surface2); color: var(--ink-soft); margin-right: 8px;
+  }
+  .rank-badge.first { background: var(--gold); color: #fff; }
+
+  .empty { text-align: center; color: var(--ink-soft); padding: 28px 10px; font-size: 14px; }
+
+  /* 확인 다이얼로그 (샌드박스에서 confirm()이 차단되므로 자체 구현) */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0, 0, 0, .45);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; width: 100%; max-width: 320px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .3);
+  }
+  .modal p { margin: 0 0 14px; }
+  .btn.danger { background: var(--red); border-color: var(--red); color: #fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<header>
+  <h1 id="appTitle"></h1>
+  <div class="row">
+    <span id="sessionBadge" hidden></span>
+    <button id="langBtn" class="hbtn"></button>
+    <button id="shareBtn" class="hbtn"></button>
+    <button id="resetBtn" class="hbtn"></button>
+  </div>
+</header>
+
+<main>
+  <section id="view-dividend"></section>
+  <section id="view-company" hidden></section>
+  <section id="view-score" hidden></section>
+</main>
+
+<footer>
+  <div class="muted" id="footerLead" style="font-size:12px; margin-bottom:6px"></div>
+  <div id="supportLinks"></div>
+</footer>
+
+<nav>
+  <button data-tab="dividend" class="on"></button>
+  <button data-tab="company"></button>
+  <button data-tab="score"></button>
+</nav>
+
+<script>
+"use strict";
+
+/* ==================== 배포 설정 ====================
+   [세션 공유] Firebase 콘솔(https://console.firebase.google.com)에서
+   ① 프로젝트 생성 → ② Realtime Database 만들기 → ③ 웹 앱 추가 후
+   firebaseConfig 객체를 복사해 아래 FIREBASE_CONFIG에 붙여넣으세요.
+   Realtime Database 규칙은 다음으로 설정:
+   { "rules": { "sessions": { "$code": { ".read": true, ".write": true } } } }
+   ※ claude.ai 미리보기에서는 외부 연결이 차단되어 세션 기능이 동작하지
+      않습니다. GitHub Pages 등 정적 호스팅에 올린 뒤 사용하세요. */
+const FIREBASE_CONFIG = null; // 예: { apiKey: "...", databaseURL: "https://....firebasedatabase.app", ... }
+
+/* [후원/문의] 실제 주소로 바꿔주세요. null로 두면 해당 버튼이 숨겨집니다 */
+const KOFI_URL = null;                                      // 해외 후원 (예: "https://ko-fi.com/아이디")
+const KR_SUPPORT_URL = null;                                // 국내 후원 (투네이션/카카오페이 링크 확정 후 입력)
+const SPONSORS_URL = null;                                  // GitHub Sponsors (예: "https://github.com/sponsors/아이디")
+const CONTACT_EMAIL = "tabletopchronicler@gmail.com";       // 문의 메일 주소
+const MAIL_SUBJECT_PREFIX = "[18xx Helper] ";               // 문의 메일 제목 접두어
+/* =================================================== */
+
+/* ---------- 다국어 ---------- */
+const LANG_KEY = "helper18xx-lang";
+let lang = (() => {
+  try { const v = localStorage.getItem(LANG_KEY); if (v === "ko" || v === "en") return v; } catch (e) {}
+  return (navigator.language || "").toLowerCase().startsWith("ko") ? "ko" : "en";
+})();
+
+const STRINGS = {
+  ko: {
+    docTitle: "18xx 배당·점수 헬퍼",
+    appTitle: "18xx 헬퍼", appSub: "배당·점수",
+    share: "공유", reset: "게임 초기화", langBtn: "EN",
+    footerLead: "이 헬퍼가 유용했다면", contact: "📮 문의하기", krSupport: "💛 국내 후원",
+    navDividend: "배당 계산", navCompany: "회사·보유", navScore: "최종 점수",
+    emptyDividend: "먼저 <b>회사·보유</b> 탭에서 플레이어와 회사를 등록하세요.",
+    pickCompany: "회사 선택",
+    revenueTitle: (size, price) => `운영 수입 (${size}주 회사 · 주가 ${price})`,
+    revenuePlaceholder: "총 수입",
+    pay: "배당 지급", withhold: "유보",
+    payTitle: "배당 지급", withholdTitle: "유보",
+    perShare: "주당 배당",
+    shares: n => `${n}주`, shortTag: " (공매도)",
+    companyTreasury: "회사 금고", allWithheld: "전액 유보",
+    treasuryRow: "자사주 → 회사 금고", remainderTag: " + 끝수",
+    poolRow: "은행주 → 회사 금고", rule1817: "1817 기준",
+    moveChart: "차트에서 직접 이동해 주세요.",
+    needPrice: "주가를 입력하면 이동 칸수를 알려드려요",
+    koreaDown: "주가 ▼ 1칸 아래 (유보 또는 수입 0) — 18Korea 기준",
+    koreaStay: "주가 제자리 (배당액이 주가 미만) — 18Korea 기준",
+    koreaUp1: "주가 ▲ 1칸 위 (배당액 ≥ 주가) — 18Korea 기준",
+    koreaUp2: "주가 ▲ 2칸 위 (배당액 ≥ 주가 ×2) — 18Korea 기준",
+    left1817: "주가 ◀ 왼쪽 1칸 (유보 또는 수입 0) — 1817 기준",
+    stay1817: "주가 제자리 (총배당이 주가 미만) — 1817 기준",
+    right1817: (n, rev) => `주가 ▶ 오른쪽 ${n}칸 (총배당 ${rev} ≥ 주가 ×${n}) — 1817 기준`,
+    players: "플레이어", noneYet: "아직 없음", namePlaceholder: "이름 입력", add: "추가",
+    tapToRemove: "탭하면 삭제",
+    price: "주가", shareCount: "주식 수", del: "삭제",
+    treasuryLabel: "자사주 (회사 금고)", poolLabel: "은행주 (시장 매물)",
+    unassigned: n => `미배정: ${n}주`, shortOk: " · 공매도로 늘어난 물량이면 정상",
+    addCompany: "회사 추가", customEntry: "직접 입력",
+    allAdded: "이 게임의 모든 회사가 추가됐어요", selectPrompt: "회사를 선택하세요",
+    addNShares: n => `${n}주 추가`, nShares: n => `${n}주`,
+    coNamePlaceholder: "회사명 (예: PRR)",
+    addCardHint: "주식 수는 회사 카드에서 언제든 수정 가능 / 보유 수를 음수로 내리면 공매도",
+    defaultCoName: n => `회사 ${n}`, unnamed: "이름 없음",
+    scoreEmpty: "플레이어를 먼저 등록하세요.",
+    scoreFormula: "최종 점수 = 현금 + 보유 주식 × 현재 주가",
+    scoreDesc: "현금만 입력하면 주식 가치는 회사·보유 탭 데이터로 자동 계산됩니다. 공매도는 음수로 차감돼요.",
+    cash: "현금", stock: "주식",
+    sharesTimes: (n, price) => `${n}주 × ${price}`,
+    cancel: "취소", close: "닫기", resetOk: "초기화",
+    delPlayerConfirm: name => `'${name}' 플레이어를 삭제할까요? 보유 주식 기록도 함께 사라집니다.`,
+    delCoConfirm: name => `'${name}' 회사를 삭제할까요?`,
+    resetConfirm: "모든 데이터(플레이어, 회사, 점수)를 지우고 새 게임을 시작할까요?",
+    resetConfirmSession: "모든 데이터를 지웁니다. 세션에 접속한 모든 사람에게 반영돼요. 초기화할까요?",
+    setupTitle: "세션 공유 준비가 필요해요",
+    setupBody: "이 파일 상단의 <b>FIREBASE_CONFIG</b>에 Firebase 프로젝트 설정을 붙여넣으면 코드 하나로 여러 명이 같은 게임을 실시간으로 볼 수 있습니다. (claude.ai 미리보기에서는 외부 연결이 차단되어 사용할 수 없어요.)",
+    sessionCode: "세션 코드",
+    sessionDesc: "같은 코드로 접속한 모두가 실시간으로 보고 수정할 수 있어요.",
+    leaveSession: "세션 나가기", sessionTitle: "세션 공유",
+    createSession: "새 세션 만들기 (현재 데이터로)", creating: "만드는 중...",
+    orJoin: "또는 코드로 참여", join: "참여",
+    checkCode: "코드를 확인해 주세요.",
+    notFound: "해당 코드의 세션을 찾을 수 없어요.",
+    connFail: "연결에 실패했어요. 인터넷과 Firebase 설정을 확인해 주세요.",
+    groups: {},
+  },
+  en: {
+    docTitle: "18xx Dividend & Score Helper",
+    appTitle: "18xx Helper", appSub: "dividends · scores",
+    share: "Share", reset: "Reset game", langBtn: "한국어",
+    footerLead: "Enjoying this helper?", contact: "📮 Contact", krSupport: "💛 Support (KR)",
+    navDividend: "Dividends", navCompany: "Companies", navScore: "Final Score",
+    emptyDividend: "Add players and companies in the <b>Companies</b> tab first.",
+    pickCompany: "Select company",
+    revenueTitle: (size, price) => `Revenue (${size}-share company · price ${price})`,
+    revenuePlaceholder: "Total revenue",
+    pay: "Pay dividend", withhold: "Withhold",
+    payTitle: "Dividend paid", withholdTitle: "Withheld",
+    perShare: "Per share",
+    shares: n => `${n} sh`, shortTag: " (short)",
+    companyTreasury: "Company treasury", allWithheld: "all withheld",
+    treasuryRow: "Treasury shares → company", remainderTag: " + remainder",
+    poolRow: "Market shares → company", rule1817: "1817 rule",
+    moveChart: "Move the token on the chart yourself.",
+    needPrice: "Enter the share price to see the token movement",
+    koreaDown: "Price ▼ 1 space down (withheld or zero revenue) — 18Korea rule",
+    koreaStay: "Price stays (dividend below share price) — 18Korea rule",
+    koreaUp1: "Price ▲ 1 space up (dividend ≥ share price) — 18Korea rule",
+    koreaUp2: "Price ▲ 2 spaces up (dividend ≥ 2× share price) — 18Korea rule",
+    left1817: "Price ◀ 1 space left (withheld or zero revenue) — 1817 rule",
+    stay1817: "Price stays (total dividend below share price) — 1817 rule",
+    right1817: (n, rev) => `Price ▶ ${n} space(s) right (total ${rev} ≥ price ×${n}) — 1817 rule`,
+    players: "Players", noneYet: "none yet", namePlaceholder: "Name", add: "Add",
+    tapToRemove: "tap to remove",
+    price: "Price", shareCount: "Shares", del: "Delete",
+    treasuryLabel: "Treasury (company-held)", poolLabel: "Market pool",
+    unassigned: n => `Unassigned: ${n} sh`, shortOk: " · negative is normal with shorts",
+    addCompany: "Add company", customEntry: "Custom",
+    allAdded: "All companies for this game are in play", selectPrompt: "Pick a company",
+    addNShares: n => `Add (${n} sh)`, nShares: n => `${n} sh`,
+    coNamePlaceholder: "Company name (e.g. PRR)",
+    addCardHint: "Share count is editable on each card / negative holdings = short position",
+    defaultCoName: n => `Company ${n}`, unnamed: "Unnamed",
+    scoreEmpty: "Add players first.",
+    scoreFormula: "Final score = cash + shares × current price",
+    scoreDesc: "Enter each player's cash; stock value is computed from the Companies tab. Shorts count as negative.",
+    cash: "Cash", stock: "Stock",
+    sharesTimes: (n, price) => `${n} sh × ${price}`,
+    cancel: "Cancel", close: "Close", resetOk: "Reset",
+    delPlayerConfirm: name => `Remove player '${name}'? Their holdings will be deleted too.`,
+    delCoConfirm: name => `Delete company '${name}'?`,
+    resetConfirm: "Clear all data (players, companies, scores) and start a new game?",
+    resetConfirmSession: "This clears all data for everyone in the session. Reset?",
+    setupTitle: "Session sharing needs setup",
+    setupBody: "Paste your Firebase project config into <b>FIREBASE_CONFIG</b> at the top of this file, and everyone can watch the same game live with a single code. (Blocked in the claude.ai preview.)",
+    sessionCode: "Session code",
+    sessionDesc: "Everyone who joins with this code sees and edits the same game in real time.",
+    leaveSession: "Leave session", sessionTitle: "Share session",
+    createSession: "Create session (with current data)", creating: "Creating...",
+    orJoin: "or join with a code", join: "Join",
+    checkCode: "Please check the code.",
+    notFound: "No session found for that code.",
+    connFail: "Connection failed. Check your internet and Firebase config.",
+    groups: { "북한": "North Korea", "남한": "South Korea" },
+  },
+};
+
+const t = (key, ...args) => {
+  const v = (STRINGS[lang] && STRINGS[lang][key]) ?? STRINGS.ko[key] ?? key;
+  return typeof v === "function" ? v(...args) : v;
+};
+const tGroup = (g) => (STRINGS[lang].groups && STRINGS[lang].groups[g]) || g;
+
+/* ---------- 게임 프리셋 (회사 목록: 18xx.games 데이터 기준) ---------- */
+const GAME_PRESETS = {
+  "1817": {
+    sizes: [2, 5, 10],
+    companies: [
+      { sym: "A&S",  name: "Alton & Southern Railway" },
+      { sym: "A&A",  name: "Arcade and Attica" },
+      { sym: "Belt", name: "Belt Railway of Chicago" },
+      { sym: "Bess", name: "Bessemer and Lake Erie Railroad" },
+      { sym: "B&A",  name: "Boston and Albany Railroad" },
+      { sym: "DL&W", name: "Delaware, Lackawanna and Western Railroad" },
+      { sym: "J",    name: "Elgin, Joliet and Eastern Railway" },
+      { sym: "GT",   name: "Grand Trunk Western Railroad" },
+      { sym: "H",    name: "Housatonic Railroad" },
+      { sym: "ME",   name: "Morristown and Erie Railway" },
+      { sym: "NYOW", name: "New York, Ontario and Western Railway" },
+      { sym: "NYSW", name: "New York, Susquehanna and Western Railway" },
+      { sym: "PSNR", name: "Pittsburgh, Shawmut and Northern Railroad" },
+      { sym: "PLE",  name: "Pittsburgh and Lake Erie Railroad" },
+      { sym: "PW",   name: "Providence and Worcester Railroad" },
+      { sym: "R",    name: "Rutland Railroad" },
+      { sym: "SR",   name: "Strasburg Railroad" },
+      { sym: "UR",   name: "Union Railroad" },
+      { sym: "WT",   name: "Warren & Trumbull Railroad" },
+      { sym: "WC",   name: "West Chester Railroad" },
+    ],
+  },
+  "1862": {
+    sizes: [10],
+    companies: [
+      { sym: "ECR",  name: "Eastern Counties Railway" },
+      { sym: "E&H",  name: "Ely & Huntingdon" },
+      { sym: "ENR",  name: "East Norfolk Railway" },
+      { sym: "ESR",  name: "East Suffolk Railway" },
+      { sym: "EUR",  name: "Eastern Union Railway" },
+      { sym: "FDR",  name: "Felixstowe Dock & Railway" },
+      { sym: "I&B",  name: "Ipswich & Bury Railway" },
+      { sym: "L&D",  name: "Lynn & Dereham Railway" },
+      { sym: "L&E",  name: "Lynn & Ely Railway" },
+      { sym: "L&H",  name: "Lynn & Hunstanton Railway" },
+      { sym: "N&B",  name: "Norwich & Brandon Railway" },
+      { sym: "N&E",  name: "Northern & Eastern Railway" },
+      { sym: "N&S",  name: "Norfolk & Suffolk, Joint Railway" },
+      { sym: "NGC",  name: "Newmarket and Great Chesterford Railway" },
+      { sym: "SVR",  name: "Colchester, Stour Valley, Sudbury & Halstead" },
+      { sym: "W&F",  name: "Wells & Fakenham Railway" },
+      { sym: "WNR",  name: "West Norfolk Railway" },
+      { sym: "WStI", name: "Wisbech, St Ives & Cambridge Junction Rwy" },
+      { sym: "WVR",  name: "Waveney Valley Railway" },
+      { sym: "Y&N",  name: "Yarmouth & Norwich Railway" },
+    ],
+  },
+  "18Korea": {
+    sizes: [10],
+    companies: [
+      { sym: "라선",   group: "북한" },
+      { sym: "청진",   group: "북한" },
+      { sym: "혜산",   group: "북한" },
+      { sym: "만포",   group: "북한" },
+      { sym: "남포",   group: "북한" },
+      { sym: "개성",   group: "북한" },
+      { sym: "원산",   group: "북한" },
+      { sym: "평양",   group: "북한" },
+      { sym: "단천",   group: "북한" },
+      { sym: "함흥",   group: "북한" },
+      { sym: "신의주", group: "북한" },
+      { sym: "개천",   group: "북한" },
+      { sym: "인천",   group: "남한" },
+      { sym: "서울",   group: "남한" },
+      { sym: "대전",   group: "남한" },
+      { sym: "대구",   group: "남한" },
+      { sym: "부산",   group: "남한" },
+      { sym: "광주",   group: "남한" },
+      { sym: "강릉",   group: "남한" },
+      { sym: "원주",   group: "남한" },
+      { sym: "창원",   group: "남한" },
+      { sym: "진주",   group: "남한" },
+      { sym: "군산",   group: "남한" },
+      { sym: "안동",   group: "남한" },
+    ],
+  },
+};
+
+/* ---------- 상태 ---------- */
+const STORAGE_KEY = "helper18xx-v1";
+const SESSION_KEY = "helper18xx-session";
+
+let state = {
+  players: [],          // 이름 배열
+  cash: [],             // 최종 점수용 현금 (players와 인덱스 동일)
+  companies: [],        // { name, size, price, treasury, pool, hold: [주 수, 음수 = 공매도] }
+  selectedCompany: 0,
+  lastDividend: null,   // { companyIdx, revenue, mode } — 세션 참여자 모두가 보도록 상태에 포함
+  game: "",             // GAME_PRESETS 키 또는 "" (직접 입력)
+};
+let activeTab = "dividend";
+let pendingPick = null; // 프리셋에서 선택했지만 아직 추가 전인 회사 sym
+
+/* Firebase는 빈 배열/null 키를 제거해서 돌려주고, 이전 버전 저장 데이터에는
+   자사주/은행주 필드가 없으므로 어디서 온 상태든 여기서 형태를 보정한다 */
+function normalizeState(s) {
+  s.players = s.players || [];
+  s.cash = s.cash || [];
+  s.companies = s.companies || [];
+  s.selectedCompany = s.selectedCompany || 0;
+  s.game = s.game || "";
+  while (s.cash.length < s.players.length) s.cash.push(0);
+  s.companies.forEach(c => {
+    c.hold = c.hold || [];
+    while (c.hold.length < s.players.length) c.hold.push(0);
+    if (typeof c.treasury !== "number") c.treasury = 0;
+    if (typeof c.pool !== "number") c.pool = 0;
+  });
+  return s;
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = Object.assign(state, JSON.parse(raw));
+  } catch (e) { /* 저장소를 못 쓰는 환경이면 메모리로만 동작 */ }
+  normalizeState(state);
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  schedulePush();
+}
+
+// 게임 통화: 18Korea는 ₩, 그 외(1817/1862/직접 입력)는 게임 관례상 $
+const fmt = (n) => (state.game === "18Korea" ? "₩" : "$") + Math.round(n).toLocaleString();
+
+/* ---------- 세션 공유 (Firebase Realtime Database) ---------- */
+let session = { code: null, fb: null, unsub: null };
+let pushTimer = null;
+
+function genCode() {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 헷갈리는 0/O/1/I 제외
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+/* Firebase는 null 값·빈 배열을 저장하지 않고 객체 키 순서도 보장하지 않으므로,
+   에코 비교는 정규화(키 정렬 + null/빈 배열 제거)한 JSON으로 한다 */
+function canon(o) {
+  if (Array.isArray(o)) return o.map(canon);
+  if (o && typeof o === "object") {
+    const out = {};
+    for (const k of Object.keys(o).sort()) {
+      const v = canon(o[k]);
+      if (v === null || v === undefined) continue;
+      if (Array.isArray(v) && v.length === 0) continue;
+      out[k] = v;
+    }
+    return out;
+  }
+  return o;
+}
+const stableJson = (o) => JSON.stringify(canon(o));
+
+let fbPromise = null;
+function firebase() {
+  if (!fbPromise) fbPromise = (async () => {
+    const appMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+    const dbMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
+    const app = appMod.initializeApp(FIREBASE_CONFIG);
+    return { db: dbMod.getDatabase(app), ref: dbMod.ref, set: dbMod.set, get: dbMod.get, onValue: dbMod.onValue };
+  })();
+  return fbPromise;
+}
+
+async function createSession() {
+  const fb = await firebase();
+  const code = genCode();
+  await fb.set(fb.ref(fb.db, "sessions/" + code), { state, updatedAt: Date.now() });
+  attachSession(code, fb);
+  return code;
+}
+
+async function joinSession(code) {
+  const fb = await firebase();
+  const snap = await fb.get(fb.ref(fb.db, "sessions/" + code));
+  if (!snap.exists()) throw new Error("not-found");
+  attachSession(code, fb);
+}
+
+function attachSession(code, fb) {
+  if (session.unsub) session.unsub();
+  session = { code, fb };
+  try { localStorage.setItem(SESSION_KEY, code); } catch (e) {}
+  session.unsub = fb.onValue(fb.ref(fb.db, "sessions/" + code + "/state"), snap => {
+    const remote = snap.val();
+    if (!remote) return;
+    if (stableJson(remote) === stableJson(state)) return; // 자기 에코 무시
+    state = normalizeState(remote);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    render();
+  });
+  updateSessionBadge();
+}
+
+function leaveSession() {
+  if (session.unsub) session.unsub();
+  session = { code: null, fb: null, unsub: null };
+  try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  updateSessionBadge();
+}
+
+function schedulePush() {
+  if (!session.code) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    const fb = session.fb;
+    fb.set(fb.ref(fb.db, "sessions/" + session.code + "/state"), state).catch(() => {});
+  }, 250);
+}
+
+function updateSessionBadge() {
+  const badge = document.getElementById("sessionBadge");
+  badge.hidden = !session.code;
+  badge.textContent = session.code ? "● " + session.code : "";
+}
+
+/* 샌드박스(iframe)에서는 window.confirm이 차단되어 항상 false를 반환하므로 자체 다이얼로그 사용 */
+function showConfirm(message, okLabel, onOk) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `<div class="modal" role="alertdialog" aria-modal="true">
+    <p></p>
+    <div class="row">
+      <button class="btn grow" data-cancel></button>
+      <button class="btn danger grow" data-ok></button>
+    </div>
+  </div>`;
+  backdrop.querySelector("p").textContent = message;
+  backdrop.querySelector("[data-cancel]").textContent = t("cancel");
+  backdrop.querySelector("[data-ok]").textContent = okLabel;
+  const close = () => backdrop.remove();
+  backdrop.onclick = (e) => { if (e.target === backdrop) close(); };
+  backdrop.querySelector("[data-cancel]").onclick = close;
+  backdrop.querySelector("[data-ok]").onclick = () => { close(); onOk(); };
+  document.body.appendChild(backdrop);
+  backdrop.querySelector("[data-cancel]").focus();
+}
+const esc = (s) => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- 배당 계산 ---------- */
+function calcDividend(company, revenue) {
+  const per = Math.floor(revenue / company.size);
+  return {
+    per,
+    payouts: company.hold.map(h => h * per),
+    treasuryAmt: company.treasury * per + (revenue - per * company.size), // 끝수는 회사 금고로
+    poolAmt: company.pool * per,
+  };
+}
+
+// 게임별 주가 이동 규칙
+// 18Korea: 유보 → 1칸 아래 / 배당 < 주가 → 제자리, ≥ 주가 → 1칸 위, ≥ 주가×2 → 2칸 위
+// 그 외(1817 기준): 유보 → 왼쪽 1칸 / 총배당 ≥ 주가×n → 오른쪽 n칸(최대 3)
+function priceMoveHint(company, revenue, mode) {
+  const noPrice = !company.price || company.price <= 0;
+
+  if (state.game === "18Korea") {
+    if (mode === "withhold" || revenue <= 0) return t("koreaDown");
+    if (noPrice) return t("needPrice");
+    if (revenue < company.price) return t("koreaStay");
+    if (revenue < company.price * 2) return t("koreaUp1");
+    return t("koreaUp2");
+  }
+
+  if (mode === "withhold" || revenue <= 0) return t("left1817");
+  if (noPrice) return t("needPrice");
+  const mult = Math.floor(revenue / company.price);
+  if (mult <= 0) return t("stay1817");
+  const n = Math.min(3, mult);
+  return t("right1817", n, fmt(revenue));
+}
+
+/* ---------- 렌더링 ---------- */
+/* 언어에 따라 바뀌는 고정 요소(헤더/탭/푸터) */
+function renderChrome() {
+  document.title = t("docTitle");
+  document.documentElement.lang = lang;
+  document.getElementById("appTitle").innerHTML = `${t("appTitle")}<small>${t("appSub")}</small>`;
+  document.getElementById("langBtn").textContent = t("langBtn");
+  document.getElementById("shareBtn").textContent = t("share");
+  document.getElementById("resetBtn").textContent = t("reset");
+  document.getElementById("footerLead").textContent = t("footerLead");
+
+  const mailHref = "mailto:" + CONTACT_EMAIL + "?subject=" + encodeURIComponent(MAIL_SUBJECT_PREFIX);
+  const links = [
+    ["☕ Ko-fi", KOFI_URL],
+    [t("krSupport"), KR_SUPPORT_URL],
+    ["♥ GitHub Sponsors", SPONSORS_URL],
+    [t("contact"), CONTACT_EMAIL ? mailHref : null],
+  ];
+  document.getElementById("supportLinks").innerHTML = links
+    .filter(([, url]) => url)
+    .map(([label, url]) => `<a href="${url}" ${url.startsWith("mailto:") ? "" : 'target="_blank" rel="noopener"'}>${label}</a>`)
+    .join("");
+
+  const navLabels = { dividend: t("navDividend"), company: t("navCompany"), score: t("navScore") };
+  document.querySelectorAll("nav button").forEach(b => b.textContent = navLabels[b.dataset.tab]);
+}
+
+function render() {
+  document.querySelectorAll("nav button").forEach(b =>
+    b.classList.toggle("on", b.dataset.tab === activeTab));
+  document.getElementById("view-dividend").hidden = activeTab !== "dividend";
+  document.getElementById("view-company").hidden = activeTab !== "company";
+  document.getElementById("view-score").hidden = activeTab !== "score";
+
+  if (activeTab === "dividend") renderDividend();
+  if (activeTab === "company") renderCompany();
+  if (activeTab === "score") renderScore();
+}
+
+/* --- 배당 탭 --- */
+function renderDividend() {
+  const el = document.getElementById("view-dividend");
+  if (state.companies.length === 0 || state.players.length === 0) {
+    el.innerHTML = `<div class="card"><div class="empty">${t("emptyDividend")}</div></div>`;
+    return;
+  }
+  if (state.selectedCompany >= state.companies.length) state.selectedCompany = 0;
+  const co = state.companies[state.selectedCompany];
+
+  const chips = state.companies.map((c, i) =>
+    `<button class="chip ${i === state.selectedCompany ? "on" : ""}" data-co="${i}">${esc(c.name)}</button>`
+  ).join("");
+
+  let resultHtml = "";
+  if (state.lastDividend && state.lastDividend.companyIdx === state.selectedCompany) {
+    const { revenue, mode } = state.lastDividend;
+    const r = calcDividend(co, revenue);
+    const rows = state.players.map((p, i) => {
+      const shares = co.hold[i];
+      if (!shares) return "";
+      const amt = mode === "withhold" ? 0 : r.payouts[i];
+      const cls = amt < 0 ? "neg" : "pos";
+      const shareLabel = t("shares", shares) + (shares < 0 ? t("shortTag") : "");
+      return `<tr><td>${esc(p)}</td><td class="muted">${shareLabel}</td>
+        <td class="money ${cls}">${amt < 0 ? "−" + fmt(-amt) : fmt(amt)}</td></tr>`;
+    }).join("");
+    let companyRows;
+    if (mode === "withhold") {
+      companyRows = `<tr><td>${t("companyTreasury")}</td><td class="muted">${t("allWithheld")}</td>
+        <td class="money">${fmt(revenue)}</td></tr>`;
+    } else {
+      companyRows = "";
+      if (co.treasury > 0 || r.treasuryAmt > 0)
+        companyRows += `<tr><td>${t("treasuryRow")}</td><td class="muted">${t("shares", co.treasury)}${r.treasuryAmt > co.treasury * r.per ? t("remainderTag") : ""}</td>
+          <td class="money">${fmt(r.treasuryAmt)}</td></tr>`;
+      if (co.pool > 0)
+        companyRows += `<tr><td>${t("poolRow")}</td><td class="muted">${t("shares", co.pool)} · ${t("rule1817")}</td>
+          <td class="money">${fmt(r.poolAmt)}</td></tr>`;
+    }
+    resultHtml = `
+      <div class="card">
+        <h2>${esc(co.name)} — ${mode === "withhold" ? t("withholdTitle") : t("payTitle")}</h2>
+        <div class="payout-summary">
+          <span class="muted">${t("perShare")}</span>
+          <span class="money per">${mode === "withhold" ? fmt(0) : fmt(r.per)}</span>
+        </div>
+        <table>
+          ${rows}
+          ${companyRows}
+        </table>
+        <div class="move-hint">${priceMoveHint(co, revenue, mode)} · ${t("moveChart")}</div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>${t("pickCompany")}</h2>
+      <div class="row wrap">${chips}</div>
+    </div>
+    <div class="card">
+      <h2>${t("revenueTitle", co.size, fmt(co.price))}</h2>
+      <div class="row">
+        <input type="number" id="revenueInput" class="grow" inputmode="numeric"
+               placeholder="${t("revenuePlaceholder")}" value="${state.lastDividend?.revenue ?? ""}">
+        <button class="btn small" data-add="10">+10</button>
+        <button class="btn small" data-add="50">+50</button>
+        <button class="btn small" data-add="100">+100</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary grow" id="payBtn">${t("pay")}</button>
+        <button class="btn grow" id="withholdBtn">${t("withhold")}</button>
+      </div>
+    </div>
+    ${resultHtml}`;
+
+  el.querySelectorAll("[data-co]").forEach(b => b.onclick = () => {
+    state.selectedCompany = +b.dataset.co;
+    state.lastDividend = null;
+    save(); render();
+  });
+  el.querySelectorAll("[data-add]").forEach(b => b.onclick = () => {
+    const input = document.getElementById("revenueInput");
+    input.value = (parseInt(input.value, 10) || 0) + +b.dataset.add;
+  });
+  const run = (mode) => {
+    const revenue = parseInt(document.getElementById("revenueInput").value, 10) || 0;
+    state.lastDividend = { companyIdx: state.selectedCompany, revenue, mode };
+    save(); render();
+  };
+  el.querySelector("#payBtn").onclick = () => run("pay");
+  el.querySelector("#withholdBtn").onclick = () => run("withhold");
+}
+
+function renderAddCompanyCard() {
+  const gameChips = [`<button class="chip ${!state.game ? "on" : ""}" data-game="">${t("customEntry")}</button>`]
+    .concat(Object.keys(GAME_PRESETS).map(g =>
+      `<button class="chip ${state.game === g ? "on" : ""}" data-game="${g}">${g}</button>`))
+    .join("");
+
+  const preset = GAME_PRESETS[state.game];
+  let picker;
+  if (preset) {
+    const taken = new Set(state.companies.map(c => c.name));
+    const remaining = preset.companies.filter(c => !taken.has(c.sym));
+    const chipFor = c =>
+      `<button class="chip ${pendingPick === c.sym ? "on" : ""}" data-pick="${esc(c.sym)}" title="${esc(c.name || c.sym)}">${esc(c.sym)}</button>`;
+
+    // 그룹이 정의된 게임(18Korea 북한/남한)은 그룹별로 나눠서 표시
+    const groupNames = [...new Set(preset.companies.map(c => c.group).filter(Boolean))];
+    let chipsArea;
+    if (groupNames.length > 0) {
+      chipsArea = groupNames.map(g => {
+        const items = remaining.filter(c => c.group === g).map(chipFor).join("");
+        return items
+          ? `<div class="muted" style="margin:6px 0 4px; font-size:12px; letter-spacing:.08em">${esc(tGroup(g))}</div>
+             <div class="row wrap">${items}</div>`
+          : "";
+      }).join("");
+    } else {
+      chipsArea = `<div class="row wrap">${remaining.map(chipFor).join("")}</div>`;
+    }
+    if (remaining.length === 0)
+      chipsArea = `<span class="muted">${t("allAdded")}</span>`;
+
+    const picked = pendingPick ? preset.companies.find(c => c.sym === pendingPick) : null;
+    const fullName = picked?.name && picked.name !== picked.sym ? " · " + esc(picked.name) : "";
+    const sizeBtns = preset.sizes
+      .map((s, i) => `<button class="btn small ${i === preset.sizes.length - 1 ? "primary" : ""}" data-new-size="${s}" ${pendingPick ? "" : "disabled"}>${t("addNShares", s)}</button>`)
+      .join("");
+    picker = `
+      <div style="margin-bottom:8px">${chipsArea}</div>
+      <div class="row">
+        <span class="grow muted">${pendingPick ? `<b>${esc(pendingPick)}</b>${fullName}` : t("selectPrompt")}</span>
+        ${sizeBtns}
+      </div>`;
+  } else {
+    picker = `
+      <div class="row">
+        <input type="text" id="newCoName" class="grow" placeholder="${t("coNamePlaceholder")}">
+        <button class="btn small" data-new-size="2">${t("nShares", 2)}</button>
+        <button class="btn small" data-new-size="5">${t("nShares", 5)}</button>
+        <button class="btn small primary" data-new-size="10">${t("nShares", 10)}</button>
+      </div>`;
+  }
+
+  return `<div class="card">
+    <h2>${t("addCompany")}</h2>
+    <div class="row wrap" style="margin-bottom:8px">${gameChips}</div>
+    ${picker}
+    <div class="muted" style="margin-top:6px">${t("addCardHint")}</div>
+  </div>`;
+}
+
+/* --- 회사·보유 탭 --- */
+function renderCompany() {
+  const el = document.getElementById("view-company");
+
+  const playerChips = state.players.map((p, i) =>
+    `<button class="chip" data-del-player="${i}" title="${t("tapToRemove")}">${esc(p)} ✕</button>`
+  ).join("");
+
+  const companyCards = state.companies.map((c, i) => {
+    const holdRows = state.players.map((p, pi) => {
+      const h = c.hold[pi];
+      return `<div class="row" style="margin-top:6px">
+        <span class="grow">${esc(p)}</span>
+        <div class="stepper">
+          <button data-step="${i}:${pi}:-1">−</button>
+          <span class="val ${h < 0 ? "neg" : ""}">${h}</span>
+          <button data-step="${i}:${pi}:1">＋</button>
+        </div>
+      </div>`;
+    }).join("");
+    const positiveHeld = c.hold.reduce((a, b) => a + Math.max(0, b), 0);
+    const unassigned = c.size - positiveHeld - c.treasury - c.pool;
+    return `<div class="card">
+      <div class="row">
+        <input type="text" value="${esc(c.name)}" data-co-name="${i}" class="grow" style="font-weight:700">
+        <button class="btn small" data-del-co="${i}">${t("del")}</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="muted grow">${t("price")} <input type="number" inputmode="numeric" value="${c.price}" data-co-price="${i}"></label>
+        <label class="muted grow">${t("shareCount")} <input type="number" inputmode="numeric" value="${c.size}" data-co-size="${i}"></label>
+      </div>
+      ${holdRows}
+      <div class="row" style="margin-top:10px; border-top:1px solid var(--line); padding-top:8px">
+        <span class="grow muted">${t("treasuryLabel")}</span>
+        <div class="stepper">
+          <button data-co-field="${i}:treasury:-1">−</button>
+          <span class="val">${c.treasury}</span>
+          <button data-co-field="${i}:treasury:1">＋</button>
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <span class="grow muted">${t("poolLabel")}</span>
+        <div class="stepper">
+          <button data-co-field="${i}:pool:-1">−</button>
+          <span class="val">${c.pool}</span>
+          <button data-co-field="${i}:pool:1">＋</button>
+        </div>
+      </div>
+      <div class="muted" style="margin-top:8px">${t("unassigned", unassigned)}${unassigned < 0 ? t("shortOk") : ""}</div>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>${t("players")}</h2>
+      <div class="row wrap" style="margin-bottom:8px">${playerChips || `<span class="muted">${t("noneYet")}</span>`}</div>
+      <div class="row">
+        <input type="text" id="newPlayer" class="grow" placeholder="${t("namePlaceholder")}">
+        <button class="btn" id="addPlayer">${t("add")}</button>
+      </div>
+    </div>
+    ${companyCards}
+    ${renderAddCompanyCard()}`;
+
+  el.querySelector("#addPlayer").onclick = () => {
+    const input = el.querySelector("#newPlayer");
+    const name = input.value.trim();
+    if (!name) return;
+    state.players.push(name);
+    state.cash.push(0);
+    state.companies.forEach(c => c.hold.push(0));
+    input.value = "";
+    save(); render();
+  };
+  el.querySelectorAll("[data-del-player]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.delPlayer;
+    showConfirm(t("delPlayerConfirm", state.players[i]), t("del"), () => {
+      state.players.splice(i, 1);
+      state.cash.splice(i, 1);
+      state.companies.forEach(c => c.hold.splice(i, 1));
+      save(); render();
+    });
+  });
+  el.querySelectorAll("[data-game]").forEach(b => b.onclick = () => {
+    state.game = b.dataset.game;
+    pendingPick = null;
+    save(); render();
+  });
+  el.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => {
+    pendingPick = b.dataset.pick;
+    render();
+  });
+  el.querySelectorAll("[data-new-size]").forEach(b => b.onclick = () => {
+    let name;
+    if (GAME_PRESETS[state.game]) {
+      if (!pendingPick) return;
+      name = pendingPick;
+      pendingPick = null;
+    } else {
+      name = el.querySelector("#newCoName").value.trim() || t("defaultCoName", state.companies.length + 1);
+    }
+    state.companies.push({
+      name, size: +b.dataset.newSize, price: 100,
+      hold: state.players.map(() => 0),
+      treasury: 0, pool: 0,
+    });
+    save(); render();
+  });
+  el.querySelectorAll("[data-del-co]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.delCo;
+    showConfirm(t("delCoConfirm", state.companies[i].name), t("del"), () => {
+      state.companies.splice(i, 1);
+      state.lastDividend = null;
+      save(); render();
+    });
+  });
+  el.querySelectorAll("[data-step]").forEach(b => b.onclick = () => {
+    const [ci, pi, d] = b.dataset.step.split(":").map(Number);
+    const c = state.companies[ci];
+    c.hold[pi] = Math.max(-c.size, Math.min(c.size, c.hold[pi] + d));
+    save(); render();
+  });
+  el.querySelectorAll("[data-co-field]").forEach(b => b.onclick = () => {
+    const [ci, field, d] = b.dataset.coField.split(":");
+    const c = state.companies[ci];
+    c[field] = Math.max(0, Math.min(c.size, c[field] + Number(d)));
+    save(); render();
+  });
+  el.querySelectorAll("[data-co-name]").forEach(inp => inp.onchange = () => {
+    state.companies[+inp.dataset.coName].name = inp.value.trim() || t("unnamed");
+    save();
+  });
+  el.querySelectorAll("[data-co-price]").forEach(inp => inp.onchange = () => {
+    state.companies[+inp.dataset.coPrice].price = Math.max(0, parseInt(inp.value, 10) || 0);
+    save();
+  });
+  el.querySelectorAll("[data-co-size]").forEach(inp => inp.onchange = () => {
+    state.companies[+inp.dataset.coSize].size = Math.max(1, parseInt(inp.value, 10) || 1);
+    save(); render();
+  });
+}
+
+/* --- 최종 점수 탭 --- */
+function renderScore() {
+  const el = document.getElementById("view-score");
+  if (state.players.length === 0) {
+    el.innerHTML = `<div class="card"><div class="empty">${t("scoreEmpty")}</div></div>`;
+    return;
+  }
+
+  const totals = state.players.map((p, i) => {
+    const stock = state.companies.reduce((sum, c) => sum + c.hold[i] * c.price, 0);
+    return { i, name: p, cash: state.cash[i] || 0, stock, total: (state.cash[i] || 0) + stock };
+  });
+  const ranking = [...totals].sort((a, b) => b.total - a.total);
+
+  const cards = totals.map(t2 => {
+    const breakdown = state.companies
+      .filter(c => c.hold[t2.i] !== 0)
+      .map(c => {
+        const v = c.hold[t2.i] * c.price;
+        return `<tr><td>${esc(c.name)}</td><td class="muted">${t("sharesTimes", c.hold[t2.i], fmt(c.price))}</td>
+          <td class="money ${v < 0 ? "neg" : ""}">${v < 0 ? "−" + fmt(-v) : fmt(v)}</td></tr>`;
+      }).join("");
+    const rank = ranking.findIndex(r => r.i === t2.i) + 1;
+    return `<div class="card">
+      <div class="row">
+        <span class="rank-badge ${rank === 1 ? "first" : ""}">${rank}</span>
+        <b class="grow">${esc(t2.name)}</b>
+        <span class="money" style="font-size:19px" id="total-${t2.i}">${fmt(t2.total)}</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="muted grow">${t("cash")}
+          <input type="number" inputmode="numeric" value="${t2.cash || ""}" placeholder="0" data-cash="${t2.i}">
+        </label>
+        <span class="muted">${t("stock")} <b class="money">${fmt(t2.stock)}</b></span>
+      </div>
+      ${breakdown ? `<table style="margin-top:8px">${breakdown}</table>` : ""}
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>${t("scoreFormula")}</h2>
+      <div class="muted">${t("scoreDesc")}</div>
+    </div>
+    ${cards}`;
+
+  el.querySelectorAll("[data-cash]").forEach(inp => {
+    inp.oninput = () => {
+      const i = +inp.dataset.cash;
+      state.cash[i] = parseInt(inp.value, 10) || 0;
+      save();
+      const stock = state.companies.reduce((sum, c) => sum + c.hold[i] * c.price, 0);
+      document.getElementById("total-" + i).textContent = fmt(state.cash[i] + stock);
+    };
+  });
+}
+
+/* ---------- 공유 모달 ---------- */
+function showSessionModal() {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  let inner;
+
+  if (!FIREBASE_CONFIG) {
+    inner = `
+      <p><b>${t("setupTitle")}</b></p>
+      <p class="muted">${t("setupBody")}</p>
+      <button class="btn grow" data-cancel style="width:100%">${t("close")}</button>`;
+  } else if (session.code) {
+    inner = `
+      <p class="muted" style="text-align:center; margin-bottom:4px">${t("sessionCode")}</p>
+      <div class="session-code">${session.code}</div>
+      <p class="muted">${t("sessionDesc")}</p>
+      <div class="row">
+        <button class="btn grow" data-cancel>${t("close")}</button>
+        <button class="btn danger grow" data-leave>${t("leaveSession")}</button>
+      </div>`;
+  } else {
+    inner = `
+      <p><b>${t("sessionTitle")}</b></p>
+      <button class="btn primary" data-create style="width:100%">${t("createSession")}</button>
+      <p class="muted" style="text-align:center; margin:10px 0 6px">${t("orJoin")}</p>
+      <div class="row">
+        <input type="text" data-code class="grow" placeholder="TRN482" maxlength="6"
+               autocapitalize="characters" style="text-transform:uppercase; text-align:center; letter-spacing:.2em">
+        <button class="btn" data-join>${t("join")}</button>
+      </div>
+      <p class="muted neg" data-err style="margin:8px 0 0; min-height:1em"></p>
+      <button class="btn grow" data-cancel style="width:100%; margin-top:6px">${t("close")}</button>`;
+  }
+
+  backdrop.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${inner}</div>`;
+  const close = () => backdrop.remove();
+  backdrop.onclick = (e) => { if (e.target === backdrop) close(); };
+  backdrop.querySelector("[data-cancel]").onclick = close;
+
+  const errEl = backdrop.querySelector("[data-err]");
+  const fail = (msg, btn, label) => { if (errEl) errEl.textContent = msg; if (btn) { btn.disabled = false; btn.textContent = label; } };
+
+  backdrop.querySelector("[data-leave]")?.addEventListener("click", () => {
+    leaveSession();
+    close();
+  });
+  backdrop.querySelector("[data-create]")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true; btn.textContent = t("creating");
+    try {
+      await createSession();
+      close(); showSessionModal(); // 코드가 보이는 화면으로 전환
+    } catch (err) {
+      fail(t("connFail"), btn, t("createSession"));
+    }
+  });
+  backdrop.querySelector("[data-join]")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    const code = backdrop.querySelector("[data-code]").value.trim().toUpperCase();
+    if (code.length < 4) { fail(t("checkCode")); return; }
+    btn.disabled = true; btn.textContent = "...";
+    try {
+      await joinSession(code);
+      close(); render();
+    } catch (err) {
+      fail(err.message === "not-found" ? t("notFound") : t("connFail"), btn, t("join"));
+    }
+  });
+
+  document.body.appendChild(backdrop);
+}
+
+/* ---------- 탭 / 초기화 / 언어 ---------- */
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  activeTab = b.dataset.tab;
+  render();
+});
+document.getElementById("resetBtn").onclick = () => {
+  showConfirm(
+    session.code ? t("resetConfirmSession") : t("resetConfirm"),
+    t("resetOk"), () => {
+      // 게임(프리셋) 선택은 유지한 채 데이터만 비운다
+      state = { players: [], cash: [], companies: [], selectedCompany: 0, lastDividend: null, game: state.game };
+      save(); render();
+    });
+};
+document.getElementById("shareBtn").onclick = showSessionModal;
+document.getElementById("langBtn").onclick = () => {
+  lang = lang === "ko" ? "en" : "ko";
+  try { localStorage.setItem(LANG_KEY, lang); } catch (e) {}
+  renderChrome(); render();
+};
+
+load();
+renderChrome();
+render();
+
+// 이전에 참여했던 세션이 있으면 자동 재접속 (새로고침 대응)
+(async () => {
+  if (!FIREBASE_CONFIG) return;
+  let code = null;
+  try { code = localStorage.getItem(SESSION_KEY); } catch (e) {}
+  if (!code) return;
+  try { await joinSession(code); } catch (e) { leaveSession(); }
+})();
+</script>
