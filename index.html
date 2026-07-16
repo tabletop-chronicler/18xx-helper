@@ -154,7 +154,7 @@
   }
   .stepper .val {
     min-width: 34px; text-align: center; font-variant-numeric: tabular-nums;
-    font-weight: 700; font-size: 16px;
+    font-weight: 700; font-size: 16px; cursor: pointer;
   }
 
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -336,7 +336,7 @@ const STRINGS = {
     scoreDesc: "현금만 입력하면 주식 가치는 회사·보유 탭 데이터로 자동 계산됩니다. 공매도는 음수로 차감돼요.",
     cash: "현금", stock: "주식",
     sharesTimes: (n, price) => `${n}주 × ${price}`,
-    cancel: "취소", close: "닫기", resetOk: "초기화",
+    cancel: "취소", close: "닫기", resetOk: "초기화", ok: "확인",
     delPlayerConfirm: name => `'${name}' 플레이어를 삭제할까요? 보유 주식 기록도 함께 사라집니다.`,
     delCoConfirm: name => `'${name}' 회사를 삭제할까요?`,
     resetConfirm: "모든 데이터(플레이어, 회사, 점수)를 지우고 새 게임을 시작할까요?",
@@ -360,6 +360,8 @@ const STRINGS = {
     analyticsNote: "서비스 개선을 위해 익명 사용 통계(Google Analytics)를 수집합니다.",
     applyPrice: "주가 반영",
     priceApplied: (from, to) => `주가 반영됨: ${from} → ${to}`,
+    extraAdjust: "능력 카드 보정",
+    extraUp: "▲ 1칸 추가", extraDown: "▼ 1칸 추가",
     parLabel: "시작 주가",
     groups: {},
   },
@@ -405,7 +407,7 @@ const STRINGS = {
     scoreDesc: "Enter each player's cash; stock value is computed from the Companies tab. Shorts count as negative.",
     cash: "Cash", stock: "Stock",
     sharesTimes: (n, price) => `${n} sh × ${price}`,
-    cancel: "Cancel", close: "Close", resetOk: "Reset",
+    cancel: "Cancel", close: "Close", resetOk: "Reset", ok: "OK",
     delPlayerConfirm: name => `Remove player '${name}'? Their holdings will be deleted too.`,
     delCoConfirm: name => `Delete company '${name}'?`,
     resetConfirm: "Clear all data (players, companies, scores) and start a new game?",
@@ -429,6 +431,8 @@ const STRINGS = {
     analyticsNote: "Anonymous usage statistics (Google Analytics) are collected to improve this tool.",
     applyPrice: "Apply price move",
     priceApplied: (from, to) => `Price updated: ${from} → ${to}`,
+    extraAdjust: "Ability card adjustment",
+    extraUp: "▲ +1 space", extraDown: "▼ -1 space",
     parLabel: "Starting price",
     groups: { "북한": "North Korea", "남한": "South Korea" },
   },
@@ -615,7 +619,17 @@ function firebase() {
     const authMod = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
     const app = appMod.initializeApp(FIREBASE_CONFIG);
     // 익명 인증: 회원가입 없이 기기별 고유 ID 부여 (방장 판별 + 잠금 규칙에 사용)
-    const cred = await authMod.signInAnonymously(authMod.getAuth(app));
+    // 모바일 인앱 브라우저(카카오톡 등)나 사파리 프라이빗 모드는 IndexedDB를 막는 경우가 있어
+    // getAuth() 기본값(IndexedDB 전용)이 조용히 실패할 수 있음 → 폴백 체인을 명시
+    const auth = authMod.initializeAuth(app, {
+      persistence: [
+        authMod.indexedDBLocalPersistence,
+        authMod.browserLocalPersistence,
+        authMod.browserSessionPersistence,
+        authMod.inMemoryPersistence,
+      ],
+    });
+    const cred = await authMod.signInAnonymously(auth);
     return { db: dbMod.getDatabase(app), uid: cred.user.uid, ref: dbMod.ref, set: dbMod.set, get: dbMod.get, onValue: dbMod.onValue };
   })();
   return fbPromise;
@@ -731,6 +745,36 @@ function showAlert(message) {
   backdrop.querySelector("[data-cancel]").onclick = close;
   document.body.appendChild(backdrop);
   backdrop.querySelector("[data-cancel]").focus();
+}
+// 스테퍼 값을 직접 입력하기 위한 숫자 모달 (+/- 버튼은 그대로 유지, 큰 값 조정 시 보조 수단)
+function showNumberInput(label, value, onOk) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = `<div class="modal" role="dialog" aria-modal="true">
+    <p></p>
+    <input type="number" inputmode="numeric" style="text-align:center; font-size:20px; margin-bottom:14px">
+    <div class="row">
+      <button class="btn grow" data-cancel></button>
+      <button class="btn primary grow" data-ok></button>
+    </div>
+  </div>`;
+  backdrop.querySelector("p").textContent = label;
+  const input = backdrop.querySelector("input");
+  input.value = value;
+  backdrop.querySelector("[data-cancel]").textContent = t("cancel");
+  backdrop.querySelector("[data-ok]").textContent = t("ok");
+  const close = () => backdrop.remove();
+  backdrop.onclick = (e) => { if (e.target === backdrop) close(); };
+  backdrop.querySelector("[data-cancel]").onclick = close;
+  const submit = () => {
+    const v = parseInt(input.value, 10);
+    close();
+    if (!Number.isNaN(v)) onOk(v);
+  };
+  backdrop.querySelector("[data-ok]").onclick = submit;
+  input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+  document.body.appendChild(backdrop);
+  input.focus(); input.select();
 }
 
 const esc = (s) => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -892,9 +936,16 @@ function renderDividend() {
       if (state.lastDividend.applied) {
         applyHtml = `<div class="muted" style="margin-top:8px">✓ ${t("priceApplied", fmt(state.lastDividend.applied.from), fmt(state.lastDividend.applied.to))}</div>`;
       } else {
-        const steps = moveSteps(co, revenue, mode);
+        const extra = state.lastDividend.extraSteps || 0;
+        const steps = moveSteps(co, revenue, mode) + extra;
         const arrow = steps < 0 ? `▼${-steps}` : steps > 0 ? `▲${steps}` : "±0";
-        applyHtml = `<button class="btn primary" id="applyPriceBtn" style="width:100%; margin-top:10px">${t("applyPrice")} (${arrow} · ${fmt(co.price)} → ${fmt(stepPrice(market, co.price, steps))})</button>`;
+        applyHtml = `
+          <div class="row" style="margin-top:10px; gap:6px; align-items:center">
+            <button class="btn small" id="extraDownBtn">${t("extraDown")}</button>
+            <span class="muted" style="flex:1; text-align:center">${t("extraAdjust")}${extra ? ` (${extra > 0 ? "+" : ""}${extra})` : ""}</span>
+            <button class="btn small" id="extraUpBtn">${t("extraUp")}</button>
+          </div>
+          <button class="btn primary" id="applyPriceBtn" style="width:100%; margin-top:8px">${t("applyPrice")} (${arrow} · ${fmt(co.price)} → ${fmt(stepPrice(market, co.price, steps))})</button>`;
       }
     }
     resultHtml = `
@@ -952,11 +1003,19 @@ function renderDividend() {
   };
   el.querySelector("#payBtn").onclick = () => run("pay");
   el.querySelector("#withholdBtn").onclick = () => run("withhold");
+  el.querySelector("#extraUpBtn")?.addEventListener("click", () => {
+    state.lastDividend.extraSteps = (state.lastDividend.extraSteps || 0) + 1;
+    save(); render();
+  });
+  el.querySelector("#extraDownBtn")?.addEventListener("click", () => {
+    state.lastDividend.extraSteps = (state.lastDividend.extraSteps || 0) - 1;
+    save(); render();
+  });
   el.querySelector("#applyPriceBtn")?.addEventListener("click", () => {
     const market = marketOf();
     if (!market || !state.lastDividend || state.lastDividend.applied) return;
     const company = state.companies[state.lastDividend.companyIdx];
-    const steps = moveSteps(company, state.lastDividend.revenue, state.lastDividend.mode);
+    const steps = moveSteps(company, state.lastDividend.revenue, state.lastDividend.mode) + (state.lastDividend.extraSteps || 0);
     const from = company.price;
     company.price = stepPrice(market, from, steps);
     state.lastDividend.applied = { from, to: company.price };
@@ -1054,14 +1113,14 @@ function renderCompany() {
         <span class="grow">${esc(p)}</span>
         <div class="stepper">
           <button data-step="${i}:${pi}:-1">−</button>
-          <span class="val ${h < 0 ? "neg" : ""}">${h}</span>
+          <span class="val ${h < 0 ? "neg" : ""}" data-val-hold="${i}:${pi}">${h}</span>
           <button data-step="${i}:${pi}:1">＋</button>
         </div>
       </div>`;
     }).join("");
     const positiveHeld = c.hold.reduce((a, b) => a + Math.max(0, b), 0);
     const unassigned = c.size - positiveHeld - c.treasury - c.pool;
-    return `<div class="card">
+    return `<div class="card" id="co-card-${i}">
       <div class="row">
         <input type="text" value="${esc(c.name)}" data-co-name="${i}" class="grow" style="font-weight:700">
         <button class="btn small" data-del-co="${i}">${t("del")}</button>
@@ -1072,7 +1131,7 @@ function renderCompany() {
           <span class="muted">${t("price")}</span>
           <div class="stepper">
             <button data-price-step="${i}:-1">−</button>
-            <span class="val">${c.price}</span>
+            <span class="val" data-val-price="${i}">${c.price}</span>
             <button data-price-step="${i}:1">＋</button>
           </div>
         </div>` : `
@@ -1084,7 +1143,7 @@ function renderCompany() {
         <span class="grow muted">${t("treasuryLabel")}</span>
         <div class="stepper">
           <button data-co-field="${i}:treasury:-1">−</button>
-          <span class="val">${c.treasury}</span>
+          <span class="val" data-val-field="${i}:treasury">${c.treasury}</span>
           <button data-co-field="${i}:treasury:1">＋</button>
         </div>
       </div>
@@ -1092,13 +1151,20 @@ function renderCompany() {
         <span class="grow muted">${t("poolLabel")}</span>
         <div class="stepper">
           <button data-co-field="${i}:pool:-1">−</button>
-          <span class="val">${c.pool}</span>
+          <span class="val" data-val-field="${i}:pool">${c.pool}</span>
           <button data-co-field="${i}:pool:1">＋</button>
         </div>
       </div>
       <div class="muted" style="margin-top:8px">${t("unassigned", unassigned)}${unassigned < 0 ? t("shortOk") : ""}</div>
     </div>`;
   }).join("");
+
+  const jumpBar = state.companies.length > 0 ? `
+    <div class="card" style="position:sticky; top:0; z-index:5; padding:10px 14px">
+      <div class="row" style="gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch">
+        ${state.companies.map((c, i) => `<button class="chip" data-jump="${i}">${esc(c.name)}</button>`).join("")}
+      </div>
+    </div>` : "";
 
   el.innerHTML = `
     <div class="card">
@@ -1109,6 +1175,7 @@ function renderCompany() {
         <button class="btn" id="addPlayer">${t("add")}</button>
       </div>
     </div>
+    ${jumpBar}
     ${companyCards}
     ${renderAddCompanyCard()}`;
 
@@ -1172,17 +1239,36 @@ function renderCompany() {
       save(); render();
     });
   });
+  el.querySelectorAll("[data-jump]").forEach(b => b.onclick = () => {
+    document.getElementById("co-card-" + b.dataset.jump)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   el.querySelectorAll("[data-step]").forEach(b => b.onclick = () => {
     const [ci, pi, d] = b.dataset.step.split(":").map(Number);
     const c = state.companies[ci];
     c.hold[pi] = Math.max(-c.size, Math.min(c.size, c.hold[pi] + d));
     save(); render();
   });
+  el.querySelectorAll("[data-val-hold]").forEach(sp => sp.onclick = () => {
+    const [ci, pi] = sp.dataset.valHold.split(":").map(Number);
+    const c = state.companies[ci];
+    showNumberInput(t("shareCount"), c.hold[pi], v => {
+      c.hold[pi] = Math.max(-c.size, Math.min(c.size, v));
+      save(); render();
+    });
+  });
   el.querySelectorAll("[data-co-field]").forEach(b => b.onclick = () => {
     const [ci, field, d] = b.dataset.coField.split(":");
     const c = state.companies[ci];
     c[field] = Math.max(0, Math.min(c.size, c[field] + Number(d)));
     save(); render();
+  });
+  el.querySelectorAll("[data-val-field]").forEach(sp => sp.onclick = () => {
+    const [ci, field] = sp.dataset.valField.split(":");
+    const c = state.companies[+ci];
+    showNumberInput(field === "treasury" ? t("treasuryLabel") : t("poolLabel"), c[field], v => {
+      c[field] = Math.max(0, Math.min(c.size, v));
+      save(); render();
+    });
   });
   el.querySelectorAll("[data-co-name]").forEach(inp => inp.onchange = () => {
     state.companies[+inp.dataset.coName].name = inp.value.trim() || t("unnamed");
@@ -1199,6 +1285,15 @@ function renderCompany() {
     const c = state.companies[ci];
     c.price = stepPrice(market, c.price, d);
     save(); render();
+  });
+  el.querySelectorAll("[data-val-price]").forEach(sp => sp.onclick = () => {
+    const market = marketOf();
+    if (!market) return;
+    const c = state.companies[+sp.dataset.valPrice];
+    showNumberInput(t("price"), c.price, v => {
+      c.price = market[priceIndex(market, Math.max(0, v))];
+      save(); render();
+    });
   });
   el.querySelectorAll("[data-co-size]").forEach(inp => inp.onchange = () => {
     state.companies[+inp.dataset.coSize].size = Math.max(1, parseInt(inp.value, 10) || 1);
@@ -1336,7 +1431,8 @@ function showSessionModal() {
       await createSession();
       close(); showSessionModal(); // 코드가 보이는 화면으로 전환
     } catch (err) {
-      fail(t("connFail"), btn, t("createSession"));
+      console.error("[18xx Helper] session create failed:", err);
+      fail(t("connFail") + " (" + (err?.code || err?.message || err) + ")", btn, t("createSession"));
     }
   });
   backdrop.querySelector("[data-join]")?.addEventListener("click", async (e) => {
@@ -1348,7 +1444,9 @@ function showSessionModal() {
       await joinSession(code);
       close(); render();
     } catch (err) {
-      fail(err.message === "not-found" ? t("notFound") : t("connFail"), btn, t("join"));
+      console.error("[18xx Helper] session join failed:", err);
+      const msg = err.message === "not-found" ? t("notFound") : t("connFail") + " (" + (err?.code || err?.message || err) + ")";
+      fail(msg, btn, t("join"));
     }
   });
 
@@ -1387,6 +1485,6 @@ render();
   let code = null;
   try { code = localStorage.getItem(SESSION_KEY); } catch (e) {}
   if (!code) return;
-  try { await joinSession(code); } catch (e) { leaveSession(); }
+  try { await joinSession(code); } catch (e) { console.error("[18xx Helper] session auto-rejoin failed:", e); leaveSession(); }
 })();
 </script>
