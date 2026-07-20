@@ -363,6 +363,9 @@ const STRINGS = {
     extraAdjust: "능력 카드 보정",
     extraUp: "▲ 1칸 추가", extraDown: "▼ 1칸 추가",
     parLabel: "시작 주가",
+    lobbyistChip: "🎩 로비스트",
+    lobbyistDesc: "대주주(최다 보유자)가 2주 더 보유한 것처럼 배당 추가 — 추가분은 은행 부담",
+    lobbyistNote: name => `🎩 로비스트 능력으로 ${name}이(가) 2주를 더 보유한 것처럼 배당을 추가로 받았어요 (은행 부담)`,
     groups: {},
   },
   en: {
@@ -434,6 +437,9 @@ const STRINGS = {
     extraAdjust: "Ability card adjustment",
     extraUp: "▲ +1 space", extraDown: "▼ -1 space",
     parLabel: "Starting price",
+    lobbyistChip: "🎩 Lobbyist",
+    lobbyistDesc: "The largest shareholder is paid as if holding 2 more shares — the extra is paid by the bank",
+    lobbyistNote: name => `🎩 Lobbyist ability paid ${name} as if holding 2 more shares (paid by the bank)`,
     groups: { "북한": "North Korea", "남한": "South Korea" },
   },
 };
@@ -562,6 +568,7 @@ function normalizeState(s) {
     while (c.hold.length < s.players.length) c.hold.push(0);
     if (typeof c.treasury !== "number") c.treasury = 0;
     if (typeof c.pool !== "number") c.pool = 0;
+    if (typeof c.lobbyist !== "boolean") c.lobbyist = false;
   });
   return s;
 }
@@ -907,15 +914,24 @@ function renderDividend() {
   if (state.lastDividend && state.lastDividend.companyIdx === state.selectedCompany) {
     const { revenue, mode } = state.lastDividend;
     const r = calcDividend(co, revenue);
+    // 로비스트 능력: 최다 보유자(동률이면 앞 순번)의 배당을 2배로 (은행 부담, 다른 주주에겐 영향 없음)
+    let largestHolderIdx = -1;
+    if (co.lobbyist && mode === "pay") {
+      let max = 0;
+      co.hold.forEach((h, idx) => { if (h > max) { max = h; largestHolderIdx = idx; } });
+    }
     const rows = state.players.map((p, i) => {
       const shares = co.hold[i];
       if (!shares) return "";
-      const amt = mode === "withhold" ? 0 : r.payouts[i];
+      const boosted = i === largestHolderIdx;
+      const amt = mode === "withhold" ? 0 : r.payouts[i] + (boosted ? 2 * r.per : 0);
       const cls = amt < 0 ? "neg" : "pos";
-      const shareLabel = t("shares", shares) + (shares < 0 ? t("shortTag") : "");
+      const shareLabel = t("shares", shares) + (shares < 0 ? t("shortTag") : "") + (boosted ? " 🎩" : "");
       return `<tr><td>${esc(p)}</td><td class="muted">${shareLabel}</td>
         <td class="money ${cls}">${amt < 0 ? "−" + fmt(-amt) : fmt(amt)}</td></tr>`;
     }).join("");
+    const lobbyistNote = largestHolderIdx >= 0
+      ? `<div class="muted" style="margin-top:6px">${t("lobbyistNote", esc(state.players[largestHolderIdx]))}</div>` : "";
     let companyRows;
     if (mode === "withhold") {
       companyRows = `<tr><td>${t("companyTreasury")}</td><td class="muted">${t("allWithheld")}</td>
@@ -959,6 +975,7 @@ function renderDividend() {
           ${rows}
           ${companyRows}
         </table>
+        ${lobbyistNote}
         <div class="move-hint">${priceMoveHint(co, revenue, mode)}${market ? "" : " · " + t("moveChart")}</div>
         ${applyHtml}
       </div>`;
@@ -1138,6 +1155,9 @@ function renderCompany() {
         <label class="muted grow">${t("price")} <input type="number" inputmode="numeric" value="${c.price}" data-co-price="${i}"></label>`}
         <label class="muted grow">${t("shareCount")} <input type="number" inputmode="numeric" value="${c.size}" data-co-size="${i}"></label>
       </div>
+      <div class="row" style="margin-top:8px">
+        <button class="chip ${c.lobbyist ? "on" : ""}" data-toggle-lobbyist="${i}" title="${t("lobbyistDesc")}">${t("lobbyistChip")}</button>
+      </div>
       ${holdRows}
       <div class="row" style="margin-top:10px; border-top:1px solid var(--line); padding-top:8px">
         <span class="grow muted">${t("treasuryLabel")}</span>
@@ -1223,12 +1243,19 @@ function renderCompany() {
     } else {
       name = el.querySelector("#newCoName").value.trim() || t("defaultCoName", state.companies.length + 1);
     }
+    const size = +b.dataset.newSize;
     state.companies.push({
-      name, size: +b.dataset.newSize,
+      name, size,
       price: preset?.par ? (pendingPar ?? preset.par.default) : 100,
       hold: state.players.map(() => 0),
-      treasury: 0, pool: 0,
+      // 대표이사 지분(2주)만 남기고 나머지는 자사주로 시작 — 설립 직후 IPO 전 상태
+      treasury: Math.max(0, size - 2), pool: 0,
     });
+    save(); render();
+  });
+  el.querySelectorAll("[data-toggle-lobbyist]").forEach(b => b.onclick = () => {
+    const c = state.companies[+b.dataset.toggleLobbyist];
+    c.lobbyist = !c.lobbyist;
     save(); render();
   });
   el.querySelectorAll("[data-del-co]").forEach(b => b.onclick = () => {
